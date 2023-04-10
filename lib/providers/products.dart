@@ -1,8 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_shop_app/providers/product.dart';
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
 
 class Products with ChangeNotifier {
-  List<Product> _items = [
+  List<Product> _items = [];/* = [
     Product(
       id: 'p1',
       title: 'Red Shirt',
@@ -35,7 +40,7 @@ class Products with ChangeNotifier {
       imageUrl:
           'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Cast-Iron-Pan.jpg/1024px-Cast-Iron-Pan.jpg',
     ),
-  ];
+  ];*/
 
   List<Product> get favoriteItems {
     return _items.where((product) => product.isFavorite).toList();
@@ -49,23 +54,97 @@ class Products with ChangeNotifier {
     return _items.firstWhere((prod) => prod.id == id);
   }
 
-  void addProduct( Product product) {
-    final newProduct = Product(id: DateTime.now().toString(), title: product.title, description: product.description, imageUrl: product.imageUrl, price: product.price);
-
-    _items.add(newProduct);
-    notifyListeners();
+  Future<void> addProduct(Product product) async {
+    try {
+      final response = await http
+          .post(Uri.http("localhost:8087", "/products"),
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            'Content-Type': 'application/json',
+            'Accept': '*/*'
+          },
+          body: json.encode({
+            'title': product.title,
+            'description': product.description,
+            'id': product.id,
+            'isFavorite': product.isFavorite,
+            'imageUrl': product.imageUrl,
+            'price': product.price,
+          }));
+      final map = json.decode(response.body);
+      final newProduct = Product(
+          id: map['id'],
+          title: map['title'],
+          description: map["description"],
+          imageUrl: map["imageUrl"],
+          price: map["price"],
+          isFavorite: map["isFavorite"]);
+      _items.add(newProduct);
+      notifyListeners();
+    } catch (error) {
+      print(error);
+      throw error!;
+    }
   }
 
-  void editProduct( Product product) {
+  Future<void> editProduct(Product product) async {
     final prodIndex = _items.indexWhere((element) => element.id == product.id);
-    if ( prodIndex > 0){
+    if (prodIndex > 0) {
+      final response = await http
+          .patch(Uri.http("localhost:8087", "/products/${product.id}"),
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            'Content-Type': 'application/json',
+            'Accept': '*/*'
+          },
+          body: json.encode({
+            'title': product.title,
+            'description': product.description,
+            'imageUrl': product.imageUrl,
+            'price': product.price,
+          }));
+      final map = json.decode(response.body);
       _items[prodIndex] = product;
       notifyListeners();
     }
   }
 
-  void deleteProduct( String id) {
-    _items.removeWhere((element) => element.id == id);
+  Future<void> fetchAndSetProduct() async{
+    try {
+      final response = await http
+          .get(Uri.http("localhost:8087", "/products"),
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            'Content-Type': 'application/json',
+            'Accept': '*/*'
+          });
+      _items=(json.decode(response.body) as List).map((i) =>
+          Product.fromJson(i)).toList();
+      notifyListeners();
+    } catch (error) {
+      print(error);
+      throw error!;
+    }
+  }
+
+  Future<void>  deleteProduct(String id) async{
+    try {
+      final response = await http
+          .delete(Uri.http("localhost:8087", "/products/${id}"),
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            'Content-Type': 'application/json',
+            'Accept': '*/*'
+          });
+      if ( response.statusCode > 399){
+        throw const HttpException("Delete do worked");
+      }
+      //final map = json.decode(response.body);
+      _items.removeWhere((element) => element.id == id);
+    } catch (error) {
+      print(error);
+      throw error!;
+    }
     notifyListeners();
   }
 }

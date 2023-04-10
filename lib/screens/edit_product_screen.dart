@@ -19,6 +19,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
   final _imageUrlController = TextEditingController();
   final _form = GlobalKey<FormState>();
   var isInit = false;
+  var _isLoading = false;
   Product _editedProduct =
       Product(id: "", title: "", description: "", imageUrl: "", price: 0);
 
@@ -66,18 +67,53 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  void _saveForm() {
+  void _saveForm() async {
     final isValid = _form.currentState?.validate();
     if ( !isValid!){
       return;
     }
     _form.currentState?.save();
+    setState(() {
+      _isLoading = true;
+    });
     if ( _editedProduct.id == null || _editedProduct.id.isEmpty) {
-      Provider.of<Products>(context, listen: false).addProduct(_editedProduct);
+      try {
+        await Provider.of<Products>(context, listen: false)
+            .addProduct(_editedProduct);
+      } catch (error){
+        return showDialog(context: context,
+            builder: (ctx) => AlertDialog(title: Text("An error occured"),content: Text(error.toString()),actions: <Widget>[
+              IconButton(onPressed: () {
+                Navigator.of(ctx)
+                    .pop();
+              },
+                icon: Icon(Icons.done),
+                color: Theme.of(context).primaryColor,),]));
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+        Navigator.of(context).pop();
+      }
     } else {
+      try {
       Provider.of<Products>(context, listen: false).editProduct(_editedProduct);
+      } catch (error){
+        return showDialog(context: context,
+            builder: (ctx) => AlertDialog(title: Text("An error occured"),content: Text(error.toString()),actions: <Widget>[
+              IconButton(onPressed: () {
+                Navigator.of(ctx)
+                    .pop();
+              },
+                icon: Icon(Icons.done),
+                color: Theme.of(context).primaryColor,),]));
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+        Navigator.of(context).pop();
+      }
     }
-    Navigator.of(context).pop();
   }
 
   @override
@@ -87,7 +123,9 @@ class _EditProductScreenState extends State<EditProductScreen> {
         title: Text("Edit Product"),
         actions: [IconButton(onPressed: _saveForm, icon: Icon(Icons.save))],
       ),
-      body: Padding(
+      body: _isLoading ? Center(
+        child: CircularProgressIndicator(),
+      ) : Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _form,

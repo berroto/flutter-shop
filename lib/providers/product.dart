@@ -17,6 +17,17 @@ class Product with ChangeNotifier{
     this.isFavorite = false
   });
 
+  static Product fromJson(map){
+    final p = Product(
+        id: map['id'],
+        title: map['title'],
+        description: map["description"],
+        imageUrl: map["imageUrl"],
+        price: map["price"],
+        isFavorite: map["isFavorite"]);
+    return p;
+  }
+
   void toggleFavoriteStatus(){
     isFavorite = !isFavorite;
     notifyListeners();
