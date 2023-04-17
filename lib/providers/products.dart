@@ -7,6 +7,15 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class Products with ChangeNotifier {
+  String authToken;
+
+
+  Products.empty(this.authToken);
+
+  Products(this.authToken, List<Product> products){
+    _items = products;
+  }
+
   List<Product> _items = [];/* = [
     Product(
       id: 'p1',
